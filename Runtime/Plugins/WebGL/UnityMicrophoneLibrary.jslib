@@ -126,7 +126,9 @@ var UnityMicrophoneLibrary = {
           }
           const data = event.inputBuffer.getChannelData(0); // unity only supports mono
           for (var i = 0; i < data.length; i++) {
-            Module.HEAPF32[activeMicrophone.audioBufferPtr / Float32Array.BYTES_PER_ELEMENT + activeMicrophone.position] = data[i];
+            // See UnityAudioLibrary.jslib: Unity 6.6 stopped exporting the heap
+            // views on `Module`; the bare view is the form that still works.
+            HEAPF32[activeMicrophone.audioBufferPtr / Float32Array.BYTES_PER_ELEMENT + activeMicrophone.position] = data[i];
             activeMicrophone.position++;
             if (activeMicrophone.position >= activeMicrophone.samples) {
               if (activeMicrophone.loop) {

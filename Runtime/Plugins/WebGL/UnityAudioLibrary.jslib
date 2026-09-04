@@ -102,7 +102,11 @@ var UnityAudioLibrary = {
         // don't process any audio if the context is suspended
         return 0;
       }
-      const chunk = new Float32Array(Module.HEAPF32.buffer, bufferPtr, bufferLength);
+      // Unity 6.6 no longer exports the heap views on `Module` (Emscripten
+      // EXPORTED_RUNTIME_METHODS was tightened), so `Module.HEAPF32` aborts the
+      // player. The bare `HEAPF32` is in scope inside a JS library and follows
+      // memory growth, which a cached copy would not.
+      const chunk = new Float32Array(HEAPF32.buffer, bufferPtr, bufferLength);
       // copy the buffer so that it isn't overwritten by the next buffer update
       const chunkCopy = new Float32Array(chunk);
       instance.chunkQueue.push(chunkCopy);
