@@ -103,6 +103,20 @@ namespace Utilities.Audio
         {
             //Debug.Log($"Start {nameof(AudioPlaybackLoop)}");
 
+            // Unity refuses to create destroyCancellationToken when Awake runs on an object that is
+            // already being destroyed (seen in production during scene teardown). Fetch it once, up
+            // front, and skip playback entirely instead of throwing.
+            CancellationToken lifetimeToken;
+
+            try
+            {
+                lifetimeToken = destroyCancellationToken;
+            }
+            catch (MissingReferenceException)
+            {
+                return;
+            }
+
             var audioContextPtr = AudioStream_InitPlayback(AudioSettings.outputSampleRate);
             var buffer = new float[AudioSettings.outputSampleRate];
             var bufferLength = buffer.Length;
@@ -114,7 +128,7 @@ namespace Utilities.Audio
                     throw new Exception("Failed to initialize a new audio context!");
                 }
 
-                while (!destroyCancellationToken.IsCancellationRequested)
+                while (!lifetimeToken.IsCancellationRequested)
                 {
                     //Debug.Log($"AudioStream_SetVolume::volume:{audioSource.volume}");
                     AudioStream_SetVolume(audioContextPtr, audioSource.volume);
