@@ -106,7 +106,7 @@ namespace Utilities.Audio
             // Unity refuses to create destroyCancellationToken when Awake runs on an object that is
             // already being destroyed (seen in production during scene teardown). Fetch it once, up
             // front, and skip playback entirely instead of throwing.
-            CancellationToken lifetimeToken;
+            System.Threading.CancellationToken lifetimeToken;
 
             try
             {
