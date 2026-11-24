@@ -28,17 +28,29 @@ namespace Utilities.Audio
         private static bool permissionsGranted;
         private static TaskCompletionSource<bool> permissionTcs;
 
+        // Medu: one getUserMedia request at a time. `devices` is polled every frame by UI (a device
+        // dropdown); without this guard each frame started another request while the browser's
+        // permission prompt was open, and they all resolved together once the player clicked Allow.
+        private static bool initPending;
+
         private static void InitializeMicrophone()
         {
+            if (initPending) { return; }
+            initPending = true;
+
             var result = Microphone_Init(Microphone_OnEnumerateDevices, Microphone_OnPermissionGranted, Microphone_OnPermissionDenied);
 
             switch (result)
             {
                 case 2:
+                    initPending = false;
                     Debug.LogError("UnityMicrophoneLibrary is not supported in this browser!");
+                    permissionTcs?.TrySetResult(false);
                     return;
                 case 1:
+                    initPending = false;
                     Debug.LogError("An error occurred when attempting to initialize the microphone!");
+                    permissionTcs?.TrySetResult(false);
                     return;
             }
         }
@@ -70,8 +82,10 @@ namespace Utilities.Audio
         [MonoPInvokeCallback(typeof(Microphone_OnPermissionGrantedDelegate))]
         private static void Microphone_OnPermissionGranted()
         {
+            initPending = false;
             permissionsGranted = true;
-            permissionTcs?.SetResult(true);
+            // TrySetResult: SetResult threw when a second grant callback arrived for the same request.
+            permissionTcs?.TrySetResult(true);
         }
 
         private delegate void Microphone_OnPermissionDeniedDelegate();
@@ -79,8 +93,9 @@ namespace Utilities.Audio
         [MonoPInvokeCallback(typeof(Microphone_OnPermissionDeniedDelegate))]
         private static void Microphone_OnPermissionDenied()
         {
+            initPending = false;
             permissionsGranted = false;
-            permissionTcs?.SetResult(false);
+            permissionTcs?.TrySetResult(false);
         }
 
         [DllImport("__Internal")]
@@ -239,13 +254,16 @@ namespace Utilities.Audio
                 return null;
             }
 
-            isRecording = true;
 #if PLATFORM_WEBGL && !UNITY_EDITOR
+            // Medu: only claim the recorder once the checks pass. Setting isRecording before this
+            // early return left it stuck on true, so every later Start logged "already in progress".
             if (!permissionsGranted)
             {
                 Debug.LogError(k_NotInitialized);
                 return null;
             }
+
+            isRecording = true;
 
             currentPosition = -1;
             var samples = frequency * length;
@@ -256,6 +274,7 @@ namespace Utilities.Audio
             {
                 Debug.LogError($"Failed to create audioBuffer with proper size! {audioBuffer.Length} != {currentClip.samples}");
                 UnityEngine.Object.Destroy(currentClip);
+                isRecording = false;
                 return null;
             }
 
@@ -270,6 +289,7 @@ namespace Utilities.Audio
 
             return currentClip;
 #else
+            isRecording = true;
             return UnityEngine.Microphone.Start(deviceName, loop, length, frequency);
 #endif
         }
