@@ -223,6 +223,8 @@ namespace Utilities.Audio
             if (Microphone.devices.Length == 0)
             {
                 Debug.LogError($"[{nameof(RecordingManager)}] No devices found to record from!");
+                // Medu: release the recorder, otherwise IsBusy stays true and every later start is refused.
+                lock (recordingLock) { isRecording = false; }
                 return null;
             }
 
@@ -240,6 +242,8 @@ namespace Utilities.Audio
             if (clip == null)
             {
                 Debug.LogError($"[{nameof(RecordingManager)}] Failed to initialize Unity Microphone!");
+                // Medu: release the recorder, otherwise IsBusy stays true and every later start is refused.
+                lock (recordingLock) { isRecording = false; }
                 return null;
             }
 
@@ -382,6 +386,8 @@ namespace Utilities.Audio
             if (Microphone.devices.Length == 0)
             {
                 Debug.LogError($"[{nameof(RecordingManager)}] No devices found to record from!");
+                // Medu: release the recorder, otherwise IsBusy stays true and every later start is refused.
+                lock (recordingLock) { isRecording = false; }
                 return;
             }
 
@@ -399,6 +405,8 @@ namespace Utilities.Audio
             if (clip == null)
             {
                 Debug.LogError($"[{nameof(RecordingManager)}] Failed to initialize Unity Microphone!");
+                // Medu: release the recorder, otherwise IsBusy stays true and every later start is refused.
+                lock (recordingLock) { isRecording = false; }
                 return;
             }
 
